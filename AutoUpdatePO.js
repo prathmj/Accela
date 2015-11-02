@@ -154,3 +154,4 @@ function debugObject(object) {
     }
     aa.print(output);
 	}
+//Adding some edits - katie
