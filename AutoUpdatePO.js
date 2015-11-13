@@ -88,9 +88,18 @@ if (capResult.getSuccess())
 			var capObject = capOwnerArr.getOutput();
 			
 			for (z in capObject){
+				//capObject seems to have no elements
 				if(capObject[z].getPrimaryOwner() == 'Y'){
 					//Double check in updateRefParcleToCap if the parcel # is analogous to the ownerNumber defined below
+					var p_owner = capObject[z].getPrimaryOwner();
+					var maddress = capObject[z].getMailAddress1();
+					aa.print("Primary Owner: "+p_owner);
+					aa.print("Mailing Addr1: "+maddress);
 					
+					//print owner & mailing address
+					//change global capid variable
+					//copy owners from parcel
+					//again print owner & mailing address - check update
 					var capOwner = capObject[z];
 					debugObject(capOwner);
 					//var ownerNumber = capOwner.getL1OwnerNumber();
