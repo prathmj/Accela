@@ -1,0 +1,223 @@
+/*
+	Global constants for adding fees to Litter and Vegetation records
+*/
+
+var capResult = aa.cap.getByAppType("Enforcement","Violations","Environmental",null);
+var capObject = new Array();
+var openCasesArray = new Array();
+var openCases
+var todayDate = new Date();
+var dontWant = new Array(null,""," ");
+/*
+	Call the Master Scripts
+*/
+var SCRIPT_VERSION = 2.0
+eval(getScriptText("INCLUDES_ACCELA_FUNCTIONS"));
+eval(getScriptText("INCLUDES_ACCELA_GLOBALS"));
+eval(getScriptText("INCLUDES_CUSTOM"));
+/*
+	Object declaration
+*/
+var invObject = function(){
+
+	this.addCapID = function(capID)
+	{
+		this.capID = capID
+	}
+	this.addParcel = function(parcel)
+	{
+		this.parcel = parcel
+	}
+	this.addAppStatus = function(appStatus)
+	{
+		this.appStatus = appStatus
+	}
+	this.addPropAddr = function(num,fullStreet,city,state,zip)
+	{
+		this.propAddrNum = num;
+		this.propAddrFullStreet = fullStreet;
+		this.propAddrCity = city;
+		this.propAddrState = state;
+		this.propAddrZip = zip;
+	}
+}
+
+/*
+	Main logic start
+*/
+
+
+if (capResult.getSuccess())
+{
+	capArray = capResult.getOutput();
+	
+	for(x in capArray)
+	{
+		// Assign a friendly variable name to avoid typing .getCapID() multiple times
+		capObject[x] = capArray[x].getCapID();
+		var openCases = new invObject();
+		openCases.addCapID(capObject[x]); 
+		//openCases.addAppStatus(string(aa.cap.getCap(openCases.capID).getOutput())); // Get the status using capID
+		openCases.addAppStatus(capArray[x].getCapType());
+		//var applength = openCases.appStatus.length - 1; //Get the length and subtract 1 to get the last element
+		var stringconvert = String(openCases.appStatus);
+		//aa.print(typeof stringconvert);
+		var statusResult = stringconvert.slice(36,-1)); // Make the new string the beginning of the final part to the last element
+		var addrResult = aa.address.getAddressByCapId(capObject[x]);
+		var parcelResult = aa.parcel.getParcelDailyByCapID(capObject[x],null);
+		//openCases.addAppStatus(statusResult); // Get the status using capID
+
+		
+		// Statement to see if cap has invoice and if that invoice is in the unpaidInvoices result
+			
+		if(parcelResult.getSuccess())
+		{
+			parcelArray = parcelResult.getOutput();
+			
+			for (parcel in parcelArray)
+			{
+				if (parcelArray[parcel].getPrimaryParcelFlag() == "Y")
+				{
+					openCases.addParcel(parcelArray[parcel].getParcelNumber())
+				}
+			}
+			if(openCases.parcel == undefined)
+			{
+				openCases.addParcel("")
+			}
+			
+		}
+		else
+		{
+			aa.print("Something went wrong with aa.parcel.getParcelByCapId().getSuccess()")
+		}
+				
+		// Statements to correctly build address information
+		if(addrResult.getSuccess())
+		{
+			addrArray = addrResult.getOutput();
+			if(Object.keys(addrArray).length == 0)
+			{
+				openCases.addPropAddr("","","","","");
+			}
+			else
+			{
+				for(addr in addrArray)
+				{
+					if(dontWant.indexOf(addrArray[addr].getHouseFractionStart()) == -1)
+					{
+						var propNum = addrArray[addr].getHouseNumberStart()+" "+addrArray[addr].getHouseFractionStart();
+					}
+					else if(dontWant.indexOf(addrArray[addr].getHouseNumberStart()) == -1)
+					{
+						var propNum = addrArray[addr].getHouseNumberStart();
+					}
+					else
+					{
+						var propNum = ""
+					}
+			
+					var addr1 = ""
+					
+					if(dontWant.indexOf(addrArray[addr].getStreetDirection()) == -1)
+					{
+						addr1 += addrArray[addr].getStreetDirection() +" ";
+					}
+					
+					if(dontWant.indexOf(addrArray[addr].getStreetPrefix()) == -1)
+					{
+						addr1 += addrArray[addr].getStreetPrefix()+" ";
+					}
+					
+					addr1 += addrArray[addr].getStreetName() + " ";
+					
+					if(dontWant.indexOf(addrArray[addr].getStreetSuffix()) == -1)
+					{
+						addr1 += addrArray[addr].getStreetSuffix() + " ";
+					}
+					
+					if(dontWant.indexOf(addrArray[addr].getStreetSuffixdirection()) == -1)
+					{
+						addr1 += addrArray[addr].getStreetSuffixdirection();
+					}
+					
+					var city1;
+					
+					if(dontWant.indexOf(addrArray[addr].getCity()) == -1)
+					{
+						city1 = addrArray[addr].getCity();
+					}
+					else
+					{
+						city1 = ""
+					}
+					
+					var state1;
+					
+					if(dontWant.indexOf(addrArray[addr].getState()) == -1)
+					{
+						state1 = addrArray[addr].getState();
+					}
+					else
+					{
+						state1 = ""
+					}
+					
+					var zip1;
+					
+					if(dontWant.indexOf(addrArray[addr].getZip()) == -1)
+					{
+						zip1 = addrArray[addr].getZip();
+					}
+					else
+					{
+						zip1 = ""
+					}
+					
+					openCases.addPropAddr(propNum,addr1,city1,state1,zip1)
+				}
+			}
+		}
+		else
+		{
+			aa.print("Something went wrong with aa.address.getAddressByCapId().getSuccess()")
+		}
+		
+		openCasesArray.push(openCases)
+	}
+}
+else
+{
+	aa.print("The capResult returned an error.");
+}
+
+
+aa.print("RecordType|Record|ParcelNbr|PropNum|PropSt|PropCity|PropState|PropZip");
+for (x in openCasesArray){
+		aa.print(openCasesArray[x].appStatus+"|"+openCasesArray[x].capID.getCustomID()+"|"+openCasesArray[x].parcel+"|"+openCasesArray[x].propAddrNum+"|"+
+		openCasesArray[x].propAddrFullStreet+"|"+openCasesArray[x].propAddrCity+"|"+openCasesArray[x].propAddrState+"|"+
+		openCasesArray[x].propAddrZip)
+}
+
+/*
+Extra functions needed to debug or call other Accela scripts
+*/
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
+
+function getScriptText(vScriptName) {
+    vScriptName = vScriptName.toUpperCase();
+    var emseBiz = aa.proxyInvoker.newInstance("com.accela.aa.emse.emse.EMSEBusiness").getOutput();
+    var emseScript = emseBiz.getMasterScript(aa.getServiceProviderCode(), vScriptName);
+    return emseScript.getScriptText() + "";
+}
+
+function debugObject(object)
+{
+var output = ''; 
+ for (property in object) { 
+   output += "<font color=red>" + property + "</font>" + ': ' + "<br><bold>" + object[property] + "</bold>" +'; ' + "<BR>"; 
+ } 
+ aa.print(output);
+}
